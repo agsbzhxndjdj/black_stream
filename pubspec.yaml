@@ -20,9 +20,6 @@ dependencies:
   # مشغل الفيديو
   video_player: ^2.8.1
   chewie: ^1.7.4
-  media_kit: ^1.1.10
-  media_kit_video: ^1.2.4
-  media_kit_libs_video: ^1.0.4
 
   # التخزين المحلي
   hive: ^2.2.3
@@ -47,6 +44,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
   assets:
     - assets/images/
     - assets/icons/
