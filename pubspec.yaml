@@ -1,5 +1,5 @@
 name: black_stream
-description: Black Stream - مشاهدة الأفلام والمسلسلات والأنمي بدون إعلانات
+description: تطبيق Black Stream لمشاهدة الأفلام والمسلسلات بدون إعلانات.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,29 +9,44 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # الشبكة وتحليل HTML
   dio: ^5.4.0
   html: ^0.15.4
-  hive: ^2.2.3
-  hive_flutter: ^1.1.0
-  path_provider: ^2.1.1
+  
+  # متصفح مدمج لتجاوز الحماية واستخراج الروابط
+  flutter_inappwebview: ^6.0.0
+
+  # مشغل الفيديو
+  video_player: ^2.8.1
+  chewie: ^1.7.4
   media_kit: ^1.1.10
   media_kit_video: ^1.2.4
   media_kit_libs_video: ^1.0.4
-  flutter_inappwebview: ^6.1.5
-  flutter_downloader: ^1.11.0
-  permission_handler: ^11.3.0
+
+  # التخزين المحلي
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.1
+
+  # واجهة المستخدم والصور
   cached_network_image: ^3.3.0
-  wakelock_plus: ^1.2.8
-  flutter_local_notifications: ^17.2.4
+  flutter_staggered_grid_view: ^0.7.0
+  shimmer: ^3.0.0
+  google_fonts: ^6.1.0
+
+  # أدوات مساعدة
+  connectivity_plus: ^6.0.1
+  url_launcher: ^6.2.2
+  permission_handler: ^11.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/
     - assets/icons/
-    - assets/translations/
