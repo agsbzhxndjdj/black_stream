@@ -65,4 +65,28 @@ class MediaItem {
       };
 
   factory MediaItem.fromJson(Map<String, dynamic> j) => MediaItem(
-        title: (j['title']
+        title: (j['title'] ?? '').toString(),
+        url: (j['url'] ?? '').toString(),
+        poster: (j['poster'] ?? '').toString(),
+        type: typeFromInt((j['type'] ?? 0) as int),
+        category: (j['category'] ?? '').toString(),
+        year: (j['year'] ?? 0) as int,
+        episodeNumber: (j['ep'] ?? 0) as int,
+        quality: (j['quality'] ?? '').toString(),
+        isDubbed: j['dubbed'] == true,
+        isLastEpisode: j['last'] == true,
+      );
+}
+
+/* ======== 📺 حلقة ======== */
+class Episode {
+  final int number;
+  final String title;
+  final String url;
+
+  const Episode({required this.number, required this.title, required this.url});
+
+  Map<String, dynamic> toJson() => {'n': number, 't': title, 'u': url};
+
+  factory Episode.fromJson(Map<String, dynamic> j) => Episode(
+        number: (j['n']
