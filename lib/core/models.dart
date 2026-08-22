@@ -1,92 +1,110 @@
-// Black Stream 🖤 - نماذج البيانات
+// lib/core/models.dart
 
-enum MediaType { movie, series, anime, program, unknown }
+enum MediaType { movie, series, anime }
 
-enum VideoType { hls, mp4, unknown }
-
-MediaType typeFromInt(int i) =>
-    (i >= 0 && i < MediaType.values.length) ? MediaType.values[i] : MediaType.unknown;
-
-VideoType videoTypeFromInt(int i) =>
-    (i >= 0 && i < VideoType.values.length) ? VideoType.values[i] : VideoType.unknown;
-
-/* ======== 🎬 عنصر وسائط (فيلم / مسلسل / أنمي / حلقة) ======== */
 class MediaItem {
   final String id;
   final String title;
-  final String url;
-  final String poster;
+  final String posterUrl;
+  final String? rating;
+  final String? year;
+  final String? quality; // HD, WEB-DL, etc.
+  final String url; // رابط صفحة التفاصيل
   final MediaType type;
-  final String category;
-  final int year;
-  final int episodeNumber;
-  final String quality;
-  final bool isDubbed;
-  final bool isLastEpisode;
+  final List<String> genres;
 
   MediaItem({
+    required this.id,
     required this.title,
+    required this.posterUrl,
+    this.rating,
+    this.year,
+    this.quality,
     required this.url,
-    this.poster = '',
-    this.type = MediaType.unknown,
-    this.category = '',
-    this.year = 0,
-    this.episodeNumber = 0,
-    this.quality = '',
-    this.isDubbed = false,
-    this.isLastEpisode = false,
-  }) : id = _hash(url);
+    required this.type,
+    this.genres = const [],
+  });
 
-  static String _hash(String s) {
-    if (s.isEmpty) return '0';
-    var h = 0;
-    for (final c in s.codeUnits) {
-      h = (h * 31 + c) & 0x7fffffff;
-    }
-    return h.toString();
+  factory MediaItem.fromMap(Map<String, dynamic> map) {
+    return MediaItem(
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      posterUrl: map['posterUrl'] ?? '',
+      rating: map['rating'],
+      year: map['year'],
+      quality: map['quality'],
+      url: map['url'] ?? '',
+      type: MediaType.values.firstWhere((e) => e.toString() == map['type'], orElse: () => MediaType.movie),
+      genres: List<String>.from(map['genres'] ?? []),
+    );
   }
 
-  bool get isMovie => type == MediaType.movie;
-  bool get isSeries => type == MediaType.series;
-  bool get isAnime => type == MediaType.anime;
-  bool get isEpisode => episodeNumber > 0;
-
-  Map<String, dynamic> toJson() => {
-        'title': title,
-        'url': url,
-        'poster': poster,
-        'type': type.index,
-        'category': category,
-        'year': year,
-        'ep': episodeNumber,
-        'quality': quality,
-        'dubbed': isDubbed,
-        'last': isLastEpisode,
-      };
-
-  factory MediaItem.fromJson(Map<String, dynamic> j) => MediaItem(
-        title: (j['title'] ?? '').toString(),
-        url: (j['url'] ?? '').toString(),
-        poster: (j['poster'] ?? '').toString(),
-        type: typeFromInt((j['type'] ?? 0) as int),
-        category: (j['category'] ?? '').toString(),
-        year: (j['year'] ?? 0) as int,
-        episodeNumber: (j['ep'] ?? 0) as int,
-        quality: (j['quality'] ?? '').toString(),
-        isDubbed: j['dubbed'] == true,
-        isLastEpisode: j['last'] == true,
-      );
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'posterUrl': posterUrl,
+      'rating': rating,
+      'year': year,
+      'quality': quality,
+      'url': url,
+      'type': type.toString(),
+      'genres': genres,
+    };
+  }
 }
 
-/* ======== 📺 حلقة ======== */
+class MediaDetails {
+  final MediaItem media;
+  final String description;
+  final String? duration;
+  final String? country;
+  final String? network;
+  final List<Season> seasons; // للمسلسلات فقط
+  final List<Server> servers; // سيرفرات المشاهدة والتحميل
+
+  MediaDetails({
+    required this.media,
+    required this.description,
+    this.duration,
+    this.country,
+    this.network,
+    this.seasons = const [],
+    this.servers = const [],
+  });
+}
+
+class Season {
+  final int number;
+  final List<Episode> episodes;
+
+  Season({required this.number, required this.episodes});
+}
+
 class Episode {
   final int number;
   final String title;
-  final String url;
+  final String url; // رابط صفحة الحلقة
+  final String? thumbnail;
 
-  const Episode({required this.number, required this.title, required this.url});
+  Episode({
+    required this.number,
+    required this.title,
+    required this.url,
+    this.thumbnail,
+  });
+}
 
-  Map<String, dynamic> toJson() => {'n': number, 't': title, 'u': url};
+class Server {
+  final String name; // اسم السيرفر (مثال: StreamHG, Mixdrop)
+  final String quality; // 1080p, 720p
+  final String watchUrl; // رابط المشاهدة المباشرة (iframe)
+  final String downloadUrl; // رابط صفحة التحميل
 
-  factory Episode.fromJson(Map<String, dynamic> j) => Episode(
-        number: (j['n']
+  Server({
+    required this.name,
+    required this.quality,
+    required this.watchUrl,
+    required this.downloadUrl,
+  });
+}
