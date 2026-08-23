@@ -42,11 +42,18 @@ jobs:
           android.enableJetifier=true
           EOF
 
-      - name: Fix root build.gradle (الحل النهائي لـ package_info_plus)
+      - name: Fix root build.gradle (الحل النهائي - بدون afterEvaluate المعقد)
         run: |
           cat > android/build.gradle << 'EOF'
           buildscript {
               ext.kotlin_version = '1.9.10'
+              // ✅ تعريف متغيرات flutter لجميع المكتبات (package_info_plus وغيره)
+              ext.flutter = [
+                  compileSdkVersion: 34,
+                  minSdkVersion: 21,
+                  targetSdkVersion: 34,
+                  ndkVersion: "25.1.8937393"
+              ]
               repositories {
                   google()
                   mavenCentral()
@@ -70,24 +77,18 @@ jobs:
               project.buildDir = "${rootProject.buildDir}/${project.name}"
           }
 
+          // ✅ إصلاح المكتبات الفرعية باستخدام subprojects فقط
           subprojects {
-              project.evaluationDependsOn(":app")
-          }
-
-          // ✅ إصلاح مشكلة package_info_plus - الطريقة الصحيحة
-          allprojects {
               afterEvaluate { project ->
                   if (project.hasProperty('android')) {
-                      project.android {
-                          if (compileSdkVersion == null) {
-                              compileSdkVersion 34
-                          }
-                          if (defaultConfig.minSdkVersion == null) {
-                              defaultConfig.minSdkVersion 21
-                          }
-                          if (defaultConfig.targetSdkVersion == null) {
-                              defaultConfig.targetSdkVersion 34
-                          }
+                      if (project.android.compileSdkVersion == null) {
+                          project.android.compileSdkVersion 34
+                      }
+                      if (project.android.defaultConfig.minSdkVersion == null) {
+                          project.android.defaultConfig.minSdkVersion 21
+                      }
+                      if (project.android.defaultConfig.targetSdkVersion == null) {
+                          project.android.defaultConfig.targetSdkVersion 34
                       }
                   }
               }
