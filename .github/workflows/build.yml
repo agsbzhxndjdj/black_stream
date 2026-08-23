@@ -37,22 +37,16 @@ jobs:
       - name: Fix gradle.properties
         run: |
           cat > android/gradle.properties << 'EOF'
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8
           android.useAndroidX=true
           android.enableJetifier=true
           EOF
 
-      - name: Fix root build.gradle with flutter variables
+      - name: Fix root build.gradle (إصلاح مشكلة package_info_plus)
         run: |
           cat > android/build.gradle << 'EOF'
           buildscript {
               ext.kotlin_version = '1.9.10'
-              ext.flutter = [
-                  compileSdkVersion: 34,
-                  minSdkVersion: 21,
-                  targetSdkVersion: 34,
-                  ndkVersion: "25.1.8937393"
-              ]
               repositories {
                   google()
                   mavenCentral()
@@ -80,19 +74,17 @@ jobs:
               project.evaluationDependsOn(":app")
           }
 
-          // إصلاح توافق المكتبات الفرعية (package_info_plus وغيره)
-          allprojects {
+          // ✅ إصلاح مشكلة package_info_plus وجميع المكتبات الفرعية
+          subprojects {
               afterEvaluate { project ->
-                  if (project.hasProperty('android')) {
+                  if (project.plugins.hasPlugin("com.android.library")) {
                       project.android {
-                          if (project.android.compileSdkVersion == null) {
-                              compileSdkVersion rootProject.ext.flutter.compileSdkVersion
+                          compileSdkVersion 34
+                          if (defaultConfig.minSdkVersion == null) {
+                              defaultConfig.minSdkVersion 21
                           }
-                          if (project.android.minSdkVersion == null) {
-                              minSdkVersion rootProject.ext.flutter.minSdkVersion
-                          }
-                          if (project.android.targetSdkVersion == null) {
-                              targetSdkVersion rootProject.ext.flutter.targetSdkVersion
+                          if (defaultConfig.targetSdkVersion == null) {
+                              defaultConfig.targetSdkVersion 34
                           }
                       }
                   }
@@ -134,9 +126,15 @@ jobs:
           include ":app"
           EOF
 
-      - name: Fix app build.gradle
+      - name: Fix app build.gradle (استخدام Plugin DSL الحديث)
         run: |
           cat > android/app/build.gradle << 'EOF'
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file('local.properties')
           if (localPropertiesFile.exists()) {
@@ -148,17 +146,10 @@ jobs:
           def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
           def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
 
-          def flutterCompileSdk = rootProject.ext.flutter.compileSdkVersion
-          def flutterMinSdk = rootProject.ext.flutter.minSdkVersion
-          def flutterTargetSdk = rootProject.ext.flutter.targetSdkVersion
-
-          apply plugin: 'com.android.application'
-          apply plugin: 'kotlin-android'
-          apply from: "$flutter.root/packages/flutter_tools/gradle/flutter.gradle"
-
           android {
               namespace "com.blackstream.app"
-              compileSdkVersion flutterCompileSdk
+              compileSdk 34
+              ndkVersion "25.1.8937393"
 
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
@@ -175,8 +166,8 @@ jobs:
 
               defaultConfig {
                   applicationId "com.blackstream.app"
-                  minSdkVersion flutterMinSdk
-                  targetSdkVersion flutterTargetSdk
+                  minSdk 21
+                  targetSdk 34
                   versionCode flutterVersionCode.toInteger()
                   versionName flutterVersionName
                   multiDexEnabled true
@@ -196,7 +187,6 @@ jobs:
           }
 
           dependencies {
-              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
               implementation 'androidx.multidex:multidex:2.0.1'
           }
           EOF
