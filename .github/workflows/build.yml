@@ -42,7 +42,7 @@ jobs:
           android.enableJetifier=true
           EOF
 
-      - name: Fix root build.gradle (إصلاح مشكلة package_info_plus)
+      - name: Fix root build.gradle (الحل النهائي لـ package_info_plus)
         run: |
           cat > android/build.gradle << 'EOF'
           buildscript {
@@ -74,12 +74,14 @@ jobs:
               project.evaluationDependsOn(":app")
           }
 
-          // ✅ إصلاح مشكلة package_info_plus وجميع المكتبات الفرعية
-          subprojects {
+          // ✅ إصلاح مشكلة package_info_plus - الطريقة الصحيحة
+          allprojects {
               afterEvaluate { project ->
-                  if (project.plugins.hasPlugin("com.android.library")) {
+                  if (project.hasProperty('android')) {
                       project.android {
-                          compileSdkVersion 34
+                          if (compileSdkVersion == null) {
+                              compileSdkVersion 34
+                          }
                           if (defaultConfig.minSdkVersion == null) {
                               defaultConfig.minSdkVersion 21
                           }
@@ -126,7 +128,7 @@ jobs:
           include ":app"
           EOF
 
-      - name: Fix app build.gradle (استخدام Plugin DSL الحديث)
+      - name: Fix app build.gradle
         run: |
           cat > android/app/build.gradle << 'EOF'
           plugins {
