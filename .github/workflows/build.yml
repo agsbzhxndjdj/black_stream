@@ -34,7 +34,7 @@ jobs:
           touch assets/images/.gitkeep
           touch assets/icons/.gitkeep
 
-      - name: Fix gradle.properties (إصلاح خطأ MaxPermSize)
+      - name: Fix gradle.properties
         run: |
           cat > android/gradle.properties << 'EOF'
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
@@ -42,9 +42,27 @@ jobs:
           android.enableJetifier=true
           EOF
 
-      - name: Fix root build.gradle
+      - name: Fix root build.gradle with flutter variables
         run: |
           cat > android/build.gradle << 'EOF'
+          buildscript {
+              ext.kotlin_version = '1.9.10'
+              ext.flutter = [
+                  compileSdkVersion: 34,
+                  minSdkVersion: 21,
+                  targetSdkVersion: 34,
+                  ndkVersion: "25.1.8937393"
+              ]
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.1.4'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+              }
+          }
+
           allprojects {
               repositories {
                   google()
@@ -60,6 +78,25 @@ jobs:
 
           subprojects {
               project.evaluationDependsOn(":app")
+          }
+
+          // إصلاح توافق المكتبات الفرعية (package_info_plus وغيره)
+          allprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android {
+                          if (project.android.compileSdkVersion == null) {
+                              compileSdkVersion rootProject.ext.flutter.compileSdkVersion
+                          }
+                          if (project.android.minSdkVersion == null) {
+                              minSdkVersion rootProject.ext.flutter.minSdkVersion
+                          }
+                          if (project.android.targetSdkVersion == null) {
+                              targetSdkVersion rootProject.ext.flutter.targetSdkVersion
+                          }
+                      }
+                  }
+              }
           }
 
           tasks.register("clean", Delete) {
@@ -97,15 +134,9 @@ jobs:
           include ":app"
           EOF
 
-      - name: Fix app build.gradle (إزالة flavors وإصلاح kotlin_version)
+      - name: Fix app build.gradle
         run: |
           cat > android/app/build.gradle << 'EOF'
-          plugins {
-              id "com.android.application"
-              id "kotlin-android"
-              id "dev.flutter.flutter-gradle-plugin"
-          }
-
           def localProperties = new Properties()
           def localPropertiesFile = rootProject.file('local.properties')
           if (localPropertiesFile.exists()) {
@@ -114,19 +145,20 @@ jobs:
               }
           }
 
-          def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-          if (flutterVersionCode == null) {
-              flutterVersionCode = '1'
-          }
+          def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
+          def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
 
-          def flutterVersionName = localProperties.getProperty('flutter.versionName')
-          if (flutterVersionName == null) {
-              flutterVersionName = '1.0'
-          }
+          def flutterCompileSdk = rootProject.ext.flutter.compileSdkVersion
+          def flutterMinSdk = rootProject.ext.flutter.minSdkVersion
+          def flutterTargetSdk = rootProject.ext.flutter.targetSdkVersion
+
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+          apply from: "$flutter.root/packages/flutter_tools/gradle/flutter.gradle"
 
           android {
               namespace "com.blackstream.app"
-              compileSdk 34
+              compileSdkVersion flutterCompileSdk
 
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_1_8
@@ -143,8 +175,8 @@ jobs:
 
               defaultConfig {
                   applicationId "com.blackstream.app"
-                  minSdk 21
-                  targetSdk 34
+                  minSdkVersion flutterMinSdk
+                  targetSdkVersion flutterTargetSdk
                   versionCode flutterVersionCode.toInteger()
                   versionName flutterVersionName
                   multiDexEnabled true
@@ -164,15 +196,15 @@ jobs:
           }
 
           dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
               implementation 'androidx.multidex:multidex:2.0.1'
           }
           EOF
 
-      - name: Fix AndroidManifest.xml (الأذونات + السماح بروابط http)
+      - name: Fix AndroidManifest.xml
         run: |
           cat > android/app/src/main/AndroidManifest.xml << 'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -185,7 +217,6 @@ jobs:
                   android:name="${applicationName}"
                   android:icon="@mipmap/ic_launcher"
                   android:usesCleartextTraffic="true">
-
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
@@ -194,18 +225,14 @@ jobs:
                       android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
                       android:hardwareAccelerated="true"
                       android:windowSoftInputMode="adjustResize">
-
                       <meta-data
                         android:name="io.flutter.embedding.android.NormalTheme"
-                        android:resource="@style/NormalTheme"
-                        />
-
+                        android:resource="@style/NormalTheme" />
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN"/>
                           <category android:name="android.intent.category.LAUNCHER"/>
                       </intent-filter>
                   </activity>
-
                   <meta-data
                       android:name="flutterEmbedding"
                       android:value="2" />
@@ -213,7 +240,7 @@ jobs:
           </manifest>
           EOF
 
-      - name: Fix MainActivity.kt (حذف القديم وإنشاء الجديد بالحزمة الصحيحة)
+      - name: Fix MainActivity.kt
         run: |
           find android/app/src/main/kotlin -name "MainActivity.kt" -delete
           mkdir -p android/app/src/main/kotlin/com/blackstream/app
