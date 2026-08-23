@@ -34,6 +34,19 @@ jobs:
           touch assets/images/.gitkeep
           touch assets/icons/.gitkeep
 
+      - name: Update Gradle wrapper to 8.7 (مطلوب من AGP 8.3.2)
+        run: |
+          mkdir -p android/gradle/wrapper
+          cat > android/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          EOF
+
       - name: Fix gradle.properties
         run: |
           cat > android/gradle.properties << 'EOF'
@@ -46,7 +59,6 @@ jobs:
         run: |
           cat > android/build.gradle << 'EOF'
           buildscript {
-              // ✅ تحديث إلى Kotlin 2.0.21 (متوافق مع package_info_plus 9.0.1)
               ext.kotlin_version = '2.0.21'
               ext.flutter = [
                   compileSdkVersion: 34,
@@ -59,7 +71,6 @@ jobs:
                   mavenCentral()
               }
               dependencies {
-                  // ✅ تحديث AGP إلى 8.3.2 (متوافق مع Kotlin 2.0)
                   classpath 'com.android.tools.build:gradle:8.3.2'
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
               }
@@ -122,9 +133,7 @@ jobs:
 
           plugins {
               id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-              // ✅ تحديث AGP إلى 8.3.2
               id "com.android.application" version "8.3.2" apply false
-              // ✅ تحديث Kotlin إلى 2.0.21
               id "org.jetbrains.kotlin.android" version "2.0.21" apply false
           }
 
